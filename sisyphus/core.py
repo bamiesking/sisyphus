@@ -192,6 +192,7 @@ class Atom():
     def _plotZeemanEnergyShift(self, nums):
         fig = plt.figure()
         ax = fig.add_subplot(111)
+        fig.subplots_adjust(bottom=0.15)
 
         # Sampling array
         n = np.arange(0, 1, 0.01)
