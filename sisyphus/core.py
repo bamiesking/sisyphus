@@ -187,7 +187,7 @@ class Atom():
         if position is not None:
             self._position = position
         
-        return np.linalg.eig(self.Hamiltonian)
+        return np.linalg.eigh(self.Hamiltonian)
 
     def _plotZeemanEnergyShift(self, nums):
         fig = plt.figure()
@@ -212,6 +212,16 @@ class Atom():
 
         # Reset position
         self.position = position_init
+
+
+        # Fix eigenvalue ordering
+        epsilon = 5e-27/A_hfs # Threshold proximity for two lines to be swapped
+        for i in range(dim):
+            for j in range(i+1, dim):
+                for k in range(len(n)):
+                    if np.abs(eigens[k, i] - eigens[k, j]) < epsilon:
+                            eigens[k+1:,i], eigens[k+1:,j] = eigens[k+1:,j], eigens[k+1:,i].copy()
+                            break
 
         # Plot lines
         for i in range(dim):
