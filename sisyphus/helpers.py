@@ -6,6 +6,7 @@
 
 import numpy as np
 
+
 def mdot(A: np.ndarray, B: np.ndarray) -> np.ndarray:
     """
         Performs elementwise matrix multiplication on two arrays of square matrixes (NxN arrays).
@@ -30,7 +31,6 @@ def mdot(A: np.ndarray, B: np.ndarray) -> np.ndarray:
     for a,b in zip(A,B):
         M = M + np.dot(a,b)
     return M
-
 
 def get_orbital_symbol(l: int) -> str:
     """
