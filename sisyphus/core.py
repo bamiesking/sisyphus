@@ -150,7 +150,7 @@ class Atom():
             np.ndarray: The Hamiltonian of the atom at the current position and field.
         """
         H0 = -1*physical_constants['Rydberg constant times hc in J'][0]*(1-(1/self.n**2))*np.identity(int(2*self.s+1)*int(2*self.l+1)*int(2*self.i+1))
-        self._Hamiltonian = lambda r : H0 + hbar*A_fs*mdot(self.L, self.S) + A_hfs*mdot(self.I, self.J) - np.tensordot(physical_constants['Bohr magneton'][0]*(self.L + 2*self.S) + physical_constants['nuclear magneton'][0]*self.I, self.B_field.fieldStrength(r), axes=((0),(0)))
+        self._Hamiltonian = lambda r : H0 + A_fs*mdot(self.L, self.S) + A_hfs*mdot(self.I, self.J) - np.tensordot(physical_constants['Bohr magneton'][0]*(self.L - physical_constants['electron g factor'][0]*self.S) + physical_constants['nuclear magneton'][0]*self.I, self.B_field.fieldStrength(r), axes=((0),(0)))
         return self._Hamiltonian(self.position)
 
     @property
