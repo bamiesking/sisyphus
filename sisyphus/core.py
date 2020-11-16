@@ -189,13 +189,14 @@ class Atom():
         
         return np.linalg.eigh(self.Hamiltonian)
 
-    def _plotZeemanEnergyShift(self, nums):
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        fig.subplots_adjust(bottom=0.15)
+    def plotZeemanEnergyShift(self, n, ax):
+        """
+            Plots the Zeeman energy shift of the hyperfine levels in the atom.
 
-        # Sampling array
-        n = np.arange(0, 1, 0.01)
+            Args:
+                n (np.ndarray): An array of discrete positions at which to evaluate Zeeman shifts
+                ax (matplotlib.pyplot.Axis): The axis object on which to plot the lines
+        """
 
         # Store initial position
         position_init = self.position
@@ -228,71 +229,7 @@ class Atom():
         for i in range(dim):
             ax.plot(n, eigens[:,i])
 
-        # Label lines
-        if nums is not None:
-            for line,i in zip(ax.get_lines(), range(len(ax.get_lines()))):
-                line.set_label(r'$|m_J={{{}}},m_I={{{}}}\rangle$'.format(nums[i][0], nums[i][1]))
-
-        # Setup plot
-        ax.set_title(r'Zeeman shifts for $^1H{{{n}}}^{{{S}}}{{{l}}}$ levels'.format(n=self.n, l=get_orbital_symbol(self.l), S=int(2*self.s+1)))
-        ax.set_xlabel(r'$\frac{\mu_B B}{A_{hfs}}$', fontsize=12)
-        ax.set_ylabel(r'$\frac{E}{A_{hfs}}$', fontsize=12, rotation=0)
-
-        # Create labels
-        xvals = [0.7 for i in range(dim)]
-        labelLines(ax.get_lines(), xvals=xvals, align=False)
-
-        # Store figure in class attribute
-        self.zeemanPlot = fig
-
-    def plotZeemanEnergyShift(self, nums: list = None) -> plt.figure:
-        """
-            Plots the Zeeman energy shift of the hyperfine levels in the atom.
-
-            Args:
-                nums (list, optional): m_I and m_J labels for the plot.
-        """
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=np.ComplexWarning)
-            return self._plotZeemanEnergyShift(nums=nums)
-
-    def saveZeemanEnergyShift(self, filename: str = None, dpi: int = 600, nums: list = None):
-        """
-            Plots the Zeeman energy shift of the hyperfine levels in the atom if a plot has not already been created, and saves it to disk.
-
-            Args:
-                filename (str, optional): The filename to save the plot to. Defaults to a value that describes the n and l quantum numbers and a unique timestamp.
-                dpi (int, optional): The dpi of the file. Defaults to 600.
-                nums (list, optional): m_I and m_J labels for the plot.
-        """
-
-        # Create a plot if one doesn't already exist.
-        if not "zeemanPlot" in locals():
-            self.plotZeemanEnergyShift(nums)
-
-        # Save plot to file
-        if filename is None:
-            filename = 'zeeman_n{}l{}_{}.png'.format(self.n, self.l, time.time())
-        self.zeemanPlot.savefig(filename, dpi=dpi)
-
-    def showZeemanEnergyShift(self, nums: list = None):
-        """
-            Plots the Zeeman energy shift of the hyperfine levels in the atom if a plot has not already been created, and shows it.
-
-            Args:
-                nums (list, optional): m_I and m_J labels for the plot.
-        """
-
-        # Create a plot if one doesn't already exist.
-        if not "zeemanPlot" in locals():
-            self.plotZeemanEnergyShift(nums)
-
-        # Close all plots apart from the Zeeman shift plot.
-        [plt.close(f) for f in plt.get_fignums() if f != self.zeemanPlot.number]
-
-        # Show the plot.
-        plt.show()
+        return ax
 
 
 
