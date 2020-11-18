@@ -177,18 +177,6 @@ class Atom():
     def position(self, position):
         self._position = position
 
-    @property
-    def B_field(self):
-        """
-            np.ndarray: The applied B field.
-        """
-        return self._B_field
-    
-    @B_field.setter
-    def B_field(self, B_field):
-        self._B_field = B_field
-        self._Hamiltonian = lambda r : H0 + A_fs*mdot(self.L, self.S) + A_hfs*mdot(self.I, self.J) - np.tensordot(physical_constants['Bohr magneton'][0]*(self.L + 2*self.S) + physical_constants['nuclear magneton'][0]*self.I, self.B_field.fieldStrength(r), axes=((0),(0)))
-
 
     def eigen(self, position=None):
         """
