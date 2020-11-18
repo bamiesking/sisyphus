@@ -149,9 +149,22 @@ class Atom():
         """
             np.ndarray: The Hamiltonian of the atom at the current position and field.
         """
-        H0 = -1*physical_constants['Rydberg constant times hc in J'][0]*(1-(1/self.n**2))*np.identity(int(2*self.s+1)*int(2*self.l+1)*int(2*self.i+1))
-        self._Hamiltonian = lambda r : H0 + A_fs*mdot(self.L, self.S) + A_hfs*mdot(self.I, self.J) - np.tensordot(physical_constants['Bohr magneton'][0]*(self.L - physical_constants['electron g factor'][0]*self.S) + physical_constants['nuclear magneton'][0]*self.I, self.B_field.fieldStrength(r), axes=((0),(0)))
+        E0 = physical_constants['Rydberg constant times hc in J'][0]
+        En = E0/(self.n**2)
+        if self.l == 0:
+            En += ((2*self.n)/(physical_constants['electron mass'][0]*physical_constants['speed of light in vacuum'][0]**2))*En**2 + self.LambShift
+        H0 = En*np.identity(int(2*self.s+1)*int(2*self.l+1)*int(2*self.i+1))
+        self._Hamiltonian = lambda r : H0 + hbar*A_fs*mdot(self.L, self.S) + A_hfs*mdot(self.I, self.J) + np.tensordot(physical_constants['Bohr magneton'][0]*(self.L - physical_constants['electron g factor'][0]*self.S) + physical_constants['nuclear magneton'][0]*self.I, self.B_field.fieldStrength(r), axes=((0),(0)))
         return self._Hamiltonian(self.position)
+
+    @property
+    def LambShift(self):
+        """
+            float: The Lamb shift of the current energy level.
+        """
+        self._LambShift = (A_fs**5)*9.11e-31*(3e8)**2/(6*np.pi)*np.log(1/(np.pi*A_fs))
+        return self._LambShift
+    
 
     @property
     def position(self):
