@@ -7,10 +7,9 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.constants import physical_constants, hbar
+from scipy.constants import physical_constants, hbar, c
 from .constants import A_fs, A_hfs
 from .helpers import mdot, get_orbital_symbol, convert_decimal_to_latex_fraction
-from labellines import labelLines
 import time
 import warnings
 import types
@@ -140,6 +139,8 @@ class Atom():
         self.L = np.kron(np.kron(construct_operator(self.l),np.identity(int(2*self.s)+1)),np.identity(int(2*self.i)+1))
         self.J = self.S + self.L 
         self.F = self.J + self.I
+
+        self.A_fs = (((physical_constants['Rydberg constant times hc in J'][0]/(self.n**2))**2)*n)/(physical_constants['electron mass'][0]*c**2)
 
         #self.generate_hamiltonian(B_field)
     
