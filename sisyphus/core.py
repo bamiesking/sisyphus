@@ -149,20 +149,32 @@ class Atom():
         """
             np.ndarray: The Hamiltonian of the atom at the current position and field.
         """
-        E0 = physical_constants['Rydberg constant times hc in J'][0]
-        En = E0/(self.n**2)
-        if self.l == 0:
-            En += ((2*self.n)/(physical_constants['electron mass'][0]*physical_constants['speed of light in vacuum'][0]**2))*En**2 + self.LambShift
-        H0 = En*np.identity(int(2*self.s+1)*int(2*self.l+1)*int(2*self.i+1))
-        self._Hamiltonian = lambda r : H0 + hbar*A_fs*mdot(self.L, self.S) + A_hfs*mdot(self.I, self.J) + np.tensordot(physical_constants['Bohr magneton'][0]*(self.L - physical_constants['electron g factor'][0]*self.S) + physical_constants['nuclear magneton'][0]*self.I, self.B_field.fieldStrength(r), axes=((0),(0)))
+        self.En = -1*physical_constants['Rydberg constant times hc in J'][0]/(self.n**2) 
+        self.En += self.DarwinTerm + self.LambShift
+        self.H0 = self.En*np.identity(int(2*self.s+1)*int(2*self.l+1)*int(2*self.i+1))
+        self._Hamiltonian = lambda r : self.H0 + self.A_fs*mdot(self.L, self.S) + A_hfs*mdot(self.I, self.J) + np.tensordot(physical_constants['Bohr magneton'][0]*(self.L - physical_constants['electron g factor'][0]*self.S) + physical_constants['nuclear magneton'][0]*self.I, self.B_field.fieldStrength(r), axes=((0),(0)))
         return self._Hamiltonian(self.position)
+
+    @property
+    def DarwinTerm(self):
+        """
+            float: The Darwin term of the current energy level.
+        """
+        self._DarwinTerm = 0
+        if self.l == 0:
+            self._DarwinTerm = (physical_constants['electron mass'][0]*c**2*A_fs**4)/(2*self.n**3)
+
+        return self._DarwinTerm
+    
 
     @property
     def LambShift(self):
         """
             float: The Lamb shift of the current energy level.
         """
-        self._LambShift = (A_fs**5)*9.11e-31*(3e8)**2/(6*np.pi)*np.log(1/(np.pi*A_fs))
+        self._LambShift = 0
+        if self.l == 0:
+            self._LambShift = (A_fs**5)*9.11e-31*(3e8)**2/(6*np.pi)*np.log(1/(np.pi*A_fs))
         return self._LambShift
     
 
