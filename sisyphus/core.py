@@ -7,8 +7,8 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.constants import physical_constants, hbar, c
-from .constants import A_fs, A_hfs
+from scipy.constants import physical_constants, hbar, c, alpha
+from .constants import A_hfs
 from .helpers import mdot, get_orbital_symbol, convert_decimal_to_latex_fraction
 import time
 import warnings
@@ -140,8 +140,6 @@ class Atom():
         self.J = self.S + self.L 
         self.F = self.J + self.I
 
-        self.A_fs = (((physical_constants['Rydberg constant times hc in J'][0]/(self.n**2))**2)*n)/(physical_constants['electron mass'][0]*c**2)
-
         #self.generate_hamiltonian(B_field)
     
 
@@ -151,21 +149,29 @@ class Atom():
             np.ndarray: The Hamiltonian of the atom at the current position and field.
         """
         self.En = -1*physical_constants['Rydberg constant times hc in J'][0]/(self.n**2) 
-        self.En += self.DarwinTerm + self.LambShift
+
+        if self.l > 0:
+            self.A_fs = (-1*self.En*(alpha**2)/(self.n))*(1/(self.l*(self.l + 0.5)*(self.l+1)))
+        else:
+            self.A_fs = 0
+
+        self.En += self.RelativisticTerms + self.LambShift
         self.H0 = self.En*np.identity(int(2*self.s+1)*int(2*self.l+1)*int(2*self.i+1))
         self._Hamiltonian = lambda r : self.H0 + self.A_fs*mdot(self.L, self.S) + A_hfs*mdot(self.I, self.J) + np.tensordot(physical_constants['Bohr magneton'][0]*(self.L - physical_constants['electron g factor'][0]*self.S) + physical_constants['nuclear magneton'][0]*self.I, self.B_field.fieldStrength(r), axes=((0),(0)))
         return self._Hamiltonian(self.position)
 
     @property
-    def DarwinTerm(self):
+    def RelativisticTerms(self):
         """
             float: The Darwin term of the current energy level.
         """
-        self._DarwinTerm = 0
+        prefactor = (-1*self.En*alpha**2/self.n**2)
+        denom = self.l + 0.5
         if self.l == 0:
-            self._DarwinTerm = (physical_constants['electron mass'][0]*c**2*A_fs**4)/(2*self.n**3)
+            denom = 1
+        self._RelativisticTerms = prefactor*(0.75 - self.n/denom)
 
-        return self._DarwinTerm
+        return self._RelativisticTerms
     
 
     @property
@@ -175,7 +181,7 @@ class Atom():
         """
         self._LambShift = 0
         if self.l == 0:
-            self._LambShift = (A_fs**5)*9.11e-31*(3e8)**2/(6*np.pi)*np.log(1/(np.pi*A_fs))
+            self._LambShift = (alpha**5)*9.11e-31*(3e8)**2/(6*np.pi)*np.log(1/(np.pi*alpha))
         return self._LambShift
     
 
@@ -224,14 +230,14 @@ class Atom():
         # Generate energies
         for i,j in zip(n, range(n.size)):
             self.position = np.array([i, i, i])
-            eigens[j] = self.eigen()[0]/A_hfs
+            eigens[j] = self.eigen()[0]
 
         # Reset position
         self.position = position_init
 
 
         # Fix eigenvalue ordering
-        epsilon = 5e-27/A_hfs # Threshold proximity for two lines to be swapped
+        epsilon = 5e-27 # Threshold proximity for two lines to be swapped
         for i in range(dim):
             for j in range(i+1, dim):
                 for k in range(len(n)):

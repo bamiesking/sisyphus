@@ -9,7 +9,6 @@
         A_hfs (float): The hydrogen hyperfine structure constant.
 """
 
-from scipy.constants import h, e, pi, epsilon_0, hbar, c
+from scipy.constants import h
 
-A_fs = e**2/(4*pi*epsilon_0*hbar*c)
 A_hfs = 1420405751.8*h/4
