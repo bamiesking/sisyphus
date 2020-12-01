@@ -7,6 +7,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.collections import LineCollection
 from scipy.constants import physical_constants, hbar, c, alpha
 from .constants import A_hfs
 from .helpers import mdot, get_orbital_symbol, convert_decimal_to_latex_fraction
@@ -237,7 +238,7 @@ class Atom():
         
         return np.linalg.eigh(self.Hamiltonian)
 
-    def plotZeemanEnergyShift(self, n, ax):
+    def plotZeemanEnergyShift(self, n):
         """
             Plots the Zeeman energy shift of the hyperfine levels in the atom.
 
@@ -271,11 +272,15 @@ class Atom():
                             eigens[k+1:,i], eigens[k+1:,j] = eigens[k+1:,j], eigens[k+1:,i].copy()
                             break
 
-        # Plot lines
-        for i in range(dim):
-            ax.plot(n, eigens[:,i])
+        lines = []
+        # Create a continuous norm to map from data points to colors
 
-        return ax
+        for i in range(self.dim):
+            points = np.array([n, eigens[:,i]]).T.reshape(-1, 1, 2)
+            segments = np.concatenate([points[:-1], points[1:]], axis=1)
+            lines.append(LineCollection(segments))
+
+        return lines
 
 
 
