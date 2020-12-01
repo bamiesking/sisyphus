@@ -114,7 +114,7 @@ class Atom():
 
     """
 
-    def __init__(self, n, l, position=np.array([0, 0, 0]), B_field=BField(np.array([lambda x: 0, lambda y : 0, lambda z : 0]))):
+    def __init__(self, n, position=np.array([0, 0, 0]), B_field=BField(np.array([lambda x: 0, lambda y : 0, lambda z : 0]))):
 
         # Store position
         self.position = position
@@ -122,21 +122,36 @@ class Atom():
         # Store field
         self.B_field = B_field
 
-        if not 0 <= l <= n-1:
-            raise ValueError('l must be between 0 and n-1 inclusive')
-
         # Set quantum numbers
         self.n = n
-        self.l = l
+        self.l = [0, self.n]
         self.s = 0.5
         self.i = 0.5
-        self.j = [np.abs(self.l-self.s), self.l + self.s]
+        self.j = lambda l: [np.abs(l-self.s), l + self.s]
         self.f = lambda j : [np.abs(j - self.i), j + self.i]
 
         # Create operators
-        self.S = np.kron(np.kron(np.identity(int(2*self.l)+1),construct_operator(self.s)),np.identity(int(2*self.i)+1))
-        self.I = np.kron(np.kron(np.identity(int(2*self.l)+1),np.identity(int(2*self.s)+1)),construct_operator(self.i))
-        self.L = np.kron(np.kron(construct_operator(self.l),np.identity(int(2*self.s)+1)),np.identity(int(2*self.i)+1))
+
+
+        degeneracies = [(int(2*l)+1)*(int(2*self.s)+1)*(int(2*self.i)+1) for l in range(self.n)]
+        self.dim = np.array(degeneracies).sum()
+        print(self.dim)
+        print(degeneracies)
+        self.L = np.full((3, self.dim, self.dim), 0+0j)
+        self.S = np.full((3, self.dim, self.dim), 0+0j)
+        self.I = np.full((3, self.dim, self.dim), 0+0j)
+        for l in range(self.n):
+            if l == 0:
+                prev = 0
+            else:
+                prev = degeneracies[l-1] - 1
+            current = degeneracies[l] + prev
+            print(l, prev, current)
+            print(self.L[:,prev:current, prev:current].shape, np.kron(np.kron(construct_operator(l),np.identity(int(2*self.s)+1)),np.identity(int(2*self.i)+1)).shape)
+            self.L[:,prev:current, prev:current] = np.kron(np.kron(construct_operator(l),np.identity(int(2*self.s)+1)),np.identity(int(2*self.i)+1))
+            self.S[:,prev:current, prev:current] = np.kron(np.kron(np.identity(int(2*l)+1),construct_operator(self.s)),np.identity(int(2*self.i)+1))
+            self.I[:,prev:current, prev:current] = np.kron(np.kron(np.identity(int(2*l)+1),np.identity(int(2*self.s)+1)),construct_operator(self.i))
+
         self.J = self.S + self.L 
         self.F = self.J + self.I
 
@@ -150,14 +165,27 @@ class Atom():
         """
         self.En = -1*physical_constants['Rydberg constant times hc in J'][0]/(self.n**2) 
 
-        if self.l > 0:
-            self.A_fs = (-1*self.En*(alpha**2)/(self.n))*(1/(self.l*(self.l + 0.5)*(self.l+1)))
-        else:
-            self.A_fs = 0
+        # if self.l > 0:
+        #     self.A_fs = (-1*self.En*(alpha**2)/(self.n))*(1/(self.l*(self.l + 0.5)*(self.l+1)))
+        # else:
+        #     self.A_fs = 0
+        self.A_fs = []
 
-        self.En += self.RelativisticTerms + self.LambShift
-        self.H0 = self.En*np.identity(int(2*self.s+1)*int(2*self.l+1)*int(2*self.i+1))
-        self._Hamiltonian = lambda r : self.H0 + self.A_fs*mdot(self.L, self.S) + A_hfs*mdot(self.I, self.J) + np.tensordot(physical_constants['Bohr magneton'][0]*(self.L - physical_constants['electron g factor'][0]*self.S) + physical_constants['nuclear magneton'][0]*self.I, self.B_field.fieldStrength(r), axes=((0),(0)))
+        for l in range(self.n):
+            for i in range((int(2*l)+1)*(int(2*self.s)+1)*(int(2*self.i)+1)):
+                if l > 0:
+                    self.A_fs.append((-1*self.En*(alpha**2)/(self.n))*(1/(l*(l + 0.5)*(l+1))))
+                else:
+                    self.A_fs.append(0)
+        self.A_fs = np.array(self.A_fs)
+        print(self.A_fs/A_hfs)
+        # print(np.dot(self.A_fs.T,mdot(self.L, self.S)))
+        # self.A_fs = np.full(self.A_fs.shape, (-1*self.En*(alpha**2)/(self.n))*(1/((self.n-1)*((self.n-1) + 0.5)*((self.n-1)+1))))
+
+        self.En_corrections = self.En #+ self.RelativisticTerms + self.LambShift
+        self.H0 = self.En_corrections*np.identity(self.dim)
+        self._MagneticInteraction = lambda r : np.tensordot(physical_constants['Bohr magneton'][0]*(self.L - physical_constants['electron g factor'][0]*self.S) + physical_constants['nuclear magneton'][0]*self.I, self.B_field.fieldStrength(r), axes=((0),(0)))
+        self._Hamiltonian = lambda r : self.H0 + np.dot(self.A_fs.T,mdot(self.L, self.S)) #+ A_hfs*mdot(self.I, self.J) + self._MagneticInteraction(r)
         return self._Hamiltonian(self.position)
 
     @property
@@ -165,10 +193,10 @@ class Atom():
         """
             float: The Darwin term of the current energy level.
         """
-        prefactor = (-1*self.En*alpha**2/self.n**2)
-        denom = self.l + 0.5
-        if self.l == 0:
-            denom = 1
+        prefactor = (-1*self.En*alpha**2)/(self.n**2)
+        denom = 0.5#self.l + 0.5
+        # if self.l == 0:
+        #     denom = 1
         self._RelativisticTerms = prefactor*(0.75 - self.n/denom)
 
         return self._RelativisticTerms
@@ -180,8 +208,8 @@ class Atom():
             float: The Lamb shift of the current energy level.
         """
         self._LambShift = 0
-        if self.l == 0:
-            self._LambShift = (alpha**5)*9.11e-31*(3e8)**2/(6*np.pi)*np.log(1/(np.pi*alpha))
+        # if self.l == 0:
+        #     self._LambShift = ((alpha**5)*physical_constants['electron mass'][0]*(c**2)/(6*np.pi))*np.log(1/(np.pi*alpha))
         return self._LambShift
     
 
@@ -221,25 +249,23 @@ class Atom():
         # Store initial position
         position_init = self.position
 
-        # Calculate dimension of operator matrices
-        dim = int(2*self.s+1)*int(2*self.l+1)*int(2*self.i+1)
 
         # Set up array to store energies
-        eigens = np.zeros((n.size, dim))
+        eigens = np.zeros((n.size, self.dim))
 
         # Generate energies
         for i,j in zip(n, range(n.size)):
             self.position = np.array([i, i, i])
-            eigens[j] = self.eigen()[0]
+            eigens[j] = self.eigen()[0]/A_hfs
 
         # Reset position
         self.position = position_init
 
 
         # Fix eigenvalue ordering
-        epsilon = 5e-27 # Threshold proximity for two lines to be swapped
-        for i in range(dim):
-            for j in range(i+1, dim):
+        epsilon = 5e-27/A_hfs # Threshold proximity for two lines to be swapped
+        for i in range(self.dim):
+            for j in range(i+1, self.dim):
                 for k in range(len(n)):
                     if np.abs(eigens[k, i] - eigens[k, j]) < epsilon:
                             eigens[k+1:,i], eigens[k+1:,j] = eigens[k+1:,j], eigens[k+1:,i].copy()
