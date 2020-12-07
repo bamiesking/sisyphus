@@ -282,5 +282,38 @@ class Atom():
 
         return lines
 
+    def calculateStateMixing(self, n, i1, i2):
+
+        # Store initial position
+        position_init = self.position
+
+
+        # Set up array to store energies
+        energies = np.zeros((n.size, self.dim))
+        states = np.full((n.size, self.dim, self.dim), 0+0j)
+
+        # Generate energies
+        for i,j in zip(n, range(n.size)):
+            self.position = np.array([i, i, i])
+            eig = self.eigen()
+            energies[j] = eig[0]/A_hfs
+            states[j] = eig[1]/np.linalg.norm(eig[1])
+            print(eig[1])
+
+        # Fix eigenvalue ordering
+        epsilon = 5e-27/A_hfs # Threshold proximity for two lines to be swapped
+        for i in range(self.dim):
+            for j in range(i+1, self.dim):
+                for k in range(len(n)):
+                    if np.abs(energies[k, i] - energies[k, j]) < epsilon:
+                            energies[k+1:,i], energies[k+1:,j] = energies[k+1:,j], energies[k+1:,i].copy()
+                            states[k+1:,:,i], states[k+1:,:,j] = states[k+1:,:,j], states[k+1:,:,i].copy()
+                            break
+
+        # Reset position
+        self.position = position_init
+
+        states = np.absolute(states)
+        return states
 
 
