@@ -11,7 +11,7 @@
 
 from scipy.constants import h
 
-A_hfs = 1420405751.8*h/4
+A_hfs = 1420405751.8*h
 
 
 # NIST Hydrogen Fine Structure energy levels in inverse cm

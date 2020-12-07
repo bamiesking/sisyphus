@@ -21,7 +21,7 @@ def format_label(label):
     return clean
 
 
-ground = Atom(1, 0).eigen()[0].mean()
+ground = Atom(1).eigen()[0].mean()
 g_I = int(2*0.5+1)
 
 # Initialise energies dictionary for storing calculated values
@@ -31,11 +31,11 @@ energies = {'1s0.5': 0}
 prev = 0
 for n in ns:
     locs = [0]
-    atom = Atom(n, n-1)
+    atom = Atom(n)
     for l in range(n):
         for j in list(set([np.abs(l-0.5), l+0.5])):
             current = prev + g_I*int(2*j+1)
-            energies['{}{}{}'.format(n, ls[l], j)] = np.around((np.flip(np.array(atom.eigen()[0]))[prev:current].mean() - ground)/(h*c*1e2), 4)
+            energies['{}{}{}'.format(n, ls[l], j)] = np.around((np.flip(np.array(-1*atom.eigen()[0]))[prev:current].mean() - ground)/(h*c*1e2), 4)
             prev = current
         prev = 0
 
