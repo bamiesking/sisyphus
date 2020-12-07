@@ -47,7 +47,7 @@ def get_orbital_symbol(l: int) -> str:
             ValueError: If l > 20
     """
 
-    if l > 20:
+    if max(l) > 20:
         raise ValueError('l cannot be greater than 20')
 
     symbol = { 0: 'S', 
@@ -71,7 +71,7 @@ def get_orbital_symbol(l: int) -> str:
                18: 'X',
                19: 'Y',
                20: 'Z'
-             }[l]
+             }[max(l)]
     return symbol
 
 def convert_decimal_to_latex_fraction(d):
