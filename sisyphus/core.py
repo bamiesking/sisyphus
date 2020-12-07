@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.constants import physical_constants, hbar, c, alpha
 from .constants import A_hfs
+from matplotlib.collections import LineCollection
 from .helpers import mdot, get_orbital_symbol, convert_decimal_to_latex_fraction
 import time
 import warnings
