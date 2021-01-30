@@ -11,7 +11,8 @@
 
 from scipy.constants import h
 
-A_hfs = 1420405751.8*h
+# Parthey - 'Precision spectroscopy on atomic hydrogen' thesis
+A_hfs = {1: 1420405751.7667*h, 2: 177556834.3*h}
 
 
 # NIST Hydrogen Fine Structure energy levels in inverse cm
