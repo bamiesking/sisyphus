@@ -59,7 +59,7 @@ def construct_operator(j: int) -> np.ndarray:
 
     return np.array([j_x, j_y, j_z])
 
-class BField():
+class Field():
     """
         Represents a magnetic field with a given field strength profile as a function of space.
 
@@ -95,7 +95,7 @@ class Atom():
             n (int): The principal quantum number of the atom.
             l (int): The orbital angular momentum quantum number of the atom.
             position (np.ndarray, optional): The position of the atom in 3D space.
-            B_field (BField, optional): The applied magnetic field.
+            B_field (Field, optional): The applied magnetic field.
 
         Attributes:
             n: The principal quantum number.
@@ -115,13 +115,14 @@ class Atom():
 
     """
 
-    def __init__(self, n, position=np.array([0, 0, 0]), B_field=BField(np.array([lambda x: 0, lambda y : 0, lambda z : 0]))):
+    def __init__(self, n, position=np.array([0, 0, 0]), B_field=Field(np.array([lambda x: 0, lambda y : 0, lambda z : 0])), E_field=Field(np.array([lambda x: 0, lambda y : 0, lambda z : 0]))):
 
         # Store position
         self.position = position
 
-        # Store field
+        # Store fields
         self.B_field = B_field
+        self.E_field = E_field
 
         # Set quantum numbers
         self.n = n
