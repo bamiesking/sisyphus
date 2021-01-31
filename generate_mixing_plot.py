@@ -3,10 +3,7 @@ from scipy.constants import physical_constants
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
-
-
-# Specify which line we want to determine mixing in relation to:
-i = 2 # n=2, l=0, F=1, mF=0 line
+from matplotlib.lines import Line2D
 
 # Define B field 
 profile = np.array([lambda x: 0,
@@ -14,53 +11,68 @@ profile = np.array([lambda x: 0,
                     lambda z: z*A_hfs[1]/physical_constants['Bohr magneton'][0]])
 B = Field(profile)
 
-fig = plt.figure()
-ax = fig.add_subplot(111)
-fig.subplots_adjust(bottom=0.15)
-
-n = np.arange(0, 1, 0.01)
+n = np.arange(0, 1, 0.001)
 atom1 = Atom(2, B_field=B)
-lines = atom1.plotZeemanEnergyShift(n)
-
-
-# atom2 = Atom(2, 1, B_field=B)
-# lines += atom2.plotZeemanEnergyShift(n)
-
 mixing = atom1.calculateStateMixing(n)
-vals = np.full((n.size, mixing.shape[-1]), 0)
-norm = plt.Normalize(0, 1)
+vals = np.full((n.size, mixing.shape[-1]), 0+0j)
 
-for j in range(mixing.shape[-1]):
-    vals[:,j] = mixing[:, j, i]
-    # vals[:,j] = np.einsum('ij,kj->i', mixing[:, i, :], mixing[:, j, :])
-    # vals[:,j] = np.tensordot(mixing[0, i, :], mixing[:,j,:], axes=(0, 1))
-# vals = np.divide(vals, np.linalg.norm(vals, axis=1)[:,None])
+fig, axs = plt.subplots(4, 4, sharex=True, sharey=True)
+fig.subplots_adjust(hspace=0.5, bottom=0.15, left=0.15)
+axs = axs.flatten()
 
-
-for line,j in zip(lines, range(len(lines))):
-    if j == i:
-        line.set_color('r')
+def moving_average(x, w):
+    if w == 1:
+        return x
     else:
-        line.set_cmap('viridis')
-        line.set_norm(norm)
-        line.set_array((vals[:, j]**2))
-        ax.add_collection(line)
+        return np.convolve(x, np.ones(w), 'valid') / w
 
-line = lines[0]
-fig.colorbar(line, ax=ax)
+titles = [
+    '1,1',
+    '1,0',
+    '1,-1',
+    '0,0',
+    '1,1',
+    '1,0',
+    '1,-1',
+    '0,0',
+    '2,2',
+    '2,1',
+    '2,0',
+    '2,-1',
+    '2,-2',
+    '1,1',
+    '1,0',
+    '1,-1'
+]
 
-# lines = ax.get_lines()
-# lines[2].set_color('k')
+average_window = 4
+
+custom_lines = [Line2D([0], [0], color='k', lw=1),
+                Line2D([0], [0], color='r', lw=1)]
+
+for i in range(mixing.shape[-1]):
+    ax = axs[i]
+    for j in range(mixing.shape[-1]):
+        vals[:,j] = np.einsum('ij,kj->i', mixing[:, i, :], mixing[:, j, :])
+    vals = np.divide(vals, np.linalg.norm(vals, axis=1)[:,None])
+    ax.plot(n[:1-average_window], moving_average((vals[:,0:4]**2).sum(axis=1), average_window), label='s', color='k')
+    ax.plot(n[:1-average_window], moving_average((vals[:,4:]**2).sum(axis=1), average_window), label='p', color='r')
+    ax.set_title(r'$|{{{}}}\rangle$'.format(titles[i]), fontsize='9')
 
 
 # Setup plot
-# ax.set_title(r'Zeeman shifts for $^1H{{{n}}}^{{{S}}}{{{l}}}$ levels'
-#              .format(n=atom1.n,
-#                      l=get_orbital_symbol(atom1.l),
-#                      S=int(2*atom1.s+1)))
+plt.suptitle(r's and p state mixing for $n=2$, $|F, m_F\rangle$ states')
 
-ax.set_xlabel(r'$\frac{\mu_B B}{A_{hfs}}$', fontsize=12)
-ax.set_ylabel(r'$\frac{E}{A_{hfs}}$', fontsize=12, rotation=0)
-ax.autoscale()
+fig.legend(custom_lines, ['s', 'p'])
+
+fig.text(0.09, 0.8, '2s', fontsize='9')
+fig.text(0.09, 0.6, '2p', fontsize='9')
+fig.text(0.09, 0.41, '2p', fontsize='9')
+fig.text(0.09, 0.23, '2p', fontsize='9')
+fig.text(0.08, 0.92, 'n={}'.format(len(n)), fontsize='9')
+
+# Labels
+fig.text(0.5, 0.04, r'$\frac{\mu_B B}{A_{hfs}^{(n=2)}}$', ha='center', fontsize='12')
+fig.text(0.04, 0.5, r'Probability of measurement in s or p state', va='center', rotation='vertical', fontsize='10')
 
 plt.show()
