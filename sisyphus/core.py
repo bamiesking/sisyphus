@@ -115,7 +115,7 @@ class Atom():
 
     """
 
-    def __init__(self, n, position=np.array([0, 0, 0]), B_field=Field(np.array([lambda x: 0, lambda y : 0, lambda z : 0])), E_field=Field(np.array([lambda x: 0, lambda y : 0, lambda z : 0]))):
+    def __init__(self, n, l=0, position=np.array([0, 0, 0]), B_field=Field(np.array([lambda x: 0, lambda y : 0, lambda z : 0])), E_field=Field(np.array([lambda x: 0, lambda y : 0, lambda z : 0]))):
 
         # Threshold proximity for two lines to be swapped
         self.epsilon = 1e-27/A_hfs[1]
@@ -129,32 +129,18 @@ class Atom():
 
         # Set quantum numbers
         self.n = n
+        self.l = l
         self.s = 0.5
         self.i = 0.5
 
         # Create operators
-        
-        ls = np.arange(0, self.n)
-        dim_L = np.array([int(2*l+1) for l in ls]).sum()
-        self.L = np.full((3, dim_L, dim_L), 0+0j)
-        prev = 0
-        for l in ls:
-            current = prev + int(2*l+1)
-            self.L[:,prev:current, prev:current] = construct_operator(l)
-            prev = current
+        self.L = np.kron(np.kron(construct_operator(self.l), np.identity(int(2*self.i + 1))), np.identity(int(2*self.i + 1)))
+        self.S = np.kron(np.kron(np.identity(int(2*self.l+1)), construct_operator(self.s)), np.identity(int(2*self.i + 1)))
+        self.I = np.kron(np.kron(np.identity(int(2*self.l+1)), np.identity(int(2*self.s + 1))), construct_operator(self.i))
+        self.J = self.L + self.S
+        self.F = self.J + self.I
 
         self.dim = self.L.shape[1]
-
-        self.L = np.kron(np.kron(self.L, np.identity(int(2*self.s + 1))), np.identity(int(2*self.i + 1)))
-        self.S = np.kron(np.kron(np.identity(self.dim), construct_operator(self.s)), np.identity(int(2*self.i + 1)))
-        self.I = np.kron(np.kron(np.identity(self.dim), np.identity(int(2*self.s + 1))), construct_operator(self.i))
-
-        self.J = self.L + self.S
-
-        self.dim = self.J.shape[1]
-
-        self.F = self.J + self.I
-    
 
     @property
     def Hamiltonian(self):
@@ -162,25 +148,36 @@ class Atom():
             np.ndarray: The Hamiltonian of the atom at the current position and field.
         """
 
-        self.H0 = np.full((self.dim, self.dim), 0+0j)
+        self._Hamiltonian = self.H0 + A_hfs[self.n]*mdot(self.J, self.I) + self.magneticDipoleInteraction + self.electricDipoleInteraction
+        return self._Hamiltonian
+    
 
-        l = 0
+    @property
+    def H0(self):
+        self._H0 = np.full((self.dim, self.dim), 0+0j)
+
         prev = 0
-        prev_label = 's'
         for label, i in zip(nist_data.keys(), range(len(nist_data.keys()))):
-            if label[0] == str(self.n):
+            if label[0:1] == '{}{}'.format(self.n, get_orbital_symbol([self.l]).lower()):
                 j = float(label[2:])
                 dim = int(2*j+1)*int(2*self.i+1)
-                current = prev + dim 
+                current = prev + dim
                 value = -1*nist_data[label]*(h*c*1e2)
-                self.H0[prev:current, prev:current] = value*np.identity(dim)
+                self._H0[prev:current, prev:current] = value*np.identity(dim)
                 prev = current
-
-
-        self._MagneticInteraction = lambda r : np.tensordot(physical_constants['Bohr magneton'][0]*(self.J - (physical_constants['electron g factor'][0] + 1)*self.S) + physical_constants['nuclear magneton'][0]*self.I, self.B_field.fieldStrength(r), axes=((0),(0)))
-        self._Hamiltonian = lambda r : self.H0 + A_hfs*mdot(self.I, self.J) + self._MagneticInteraction(r)
-        return self._Hamiltonian(self.position)
+        return self._H0
     
+
+    @property
+    def magneticDipoleInteraction(self):
+        self._magneticDipoleInteraction = np.tensordot(physical_constants['Bohr magneton'][0]*(self.L - physical_constants['electron g factor'][0]*self.S) + physical_constants['nuclear magneton'][0]*self.I, self.B_field.fieldStrength(self.position), axes=((0),(0)))
+        return self._magneticDipoleInteraction
+
+    @property
+    def electricDipoleInteraction(self):
+        # Placeholder interaction - to be properly implemented later
+        self._electricDipoleInteraction = np.tensordot(np.zeros(self.L.shape), self.E_field.fieldStrength(self.position), axes=((0), (0)))
+        return self._electricDipoleInteraction
 
     @property
     def position(self):
