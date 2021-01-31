@@ -237,8 +237,6 @@ class Atom():
                             break
 
         lines = []
-        # Create a continuous norm to map from data points to colors
-
         for i in range(self.dim):
             points = np.array([n, eigens[:,i]]).T.reshape(-1, 1, 2)
             segments = np.concatenate([points[:-1], points[1:]], axis=1)
@@ -246,7 +244,7 @@ class Atom():
 
         return lines
 
-    def calculateStateMixing(self, n, i1, i2):
+    def calculateStateMixing(self, n):
 
         # Store initial position
         position_init = self.position
@@ -260,15 +258,14 @@ class Atom():
         for i,j in zip(n, range(n.size)):
             self.position = np.array([i, i, i])
             eig = self.eigen()
-            energies[j] = eig[0]/A_hfs
-            states[j] = eig[1]/np.linalg.norm(eig[1])
+            energies[j] = eig[0]/A_hfs[1]
+            states[j] = eig[1]
 
         # Fix eigenvalue ordering
-        epsilon = 5e-27/A_hfs # Threshold proximity for two lines to be swapped
         for i in range(self.dim):
             for j in range(i+1, self.dim):
                 for k in range(len(n)):
-                    if np.abs(energies[k, i] - energies[k, j]) < epsilon:
+                    if np.abs(energies[k, i] - energies[k, j]) < self.epsilon:
                             energies[k+1:,i], energies[k+1:,j] = energies[k+1:,j], energies[k+1:,i].copy()
                             states[k+1:,:,i], states[k+1:,:,j] = states[k+1:,:,j], states[k+1:,:,i].copy()
                             break
