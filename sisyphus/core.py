@@ -117,6 +117,9 @@ class Atom():
 
     def __init__(self, n, position=np.array([0, 0, 0]), B_field=Field(np.array([lambda x: 0, lambda y : 0, lambda z : 0])), E_field=Field(np.array([lambda x: 0, lambda y : 0, lambda z : 0]))):
 
+        # Threshold proximity for two lines to be swapped
+        self.epsilon = 1e-27/A_hfs[1]
+
         # Store position
         self.position = position
 
@@ -222,18 +225,17 @@ class Atom():
         # Generate energies
         for i,j in zip(n, range(n.size)):
             self.position = np.array([i, i, i])
-            eigens[j] = self.eigen()[0]/A_hfs
+            eigens[j] = self.eigen()[0]/A_hfs[1]
 
         # Reset position
         self.position = position_init
 
 
         # Fix eigenvalue ordering
-        epsilon = 5e-27/A_hfs # Threshold proximity for two lines to be swapped
         for i in range(self.dim):
             for j in range(i+1, self.dim):
                 for k in range(len(n)):
-                    if np.abs(eigens[k, i] - eigens[k, j]) < epsilon:
+                    if np.abs(eigens[k, i] - eigens[k, j]) < self.epsilon:
                             eigens[k+1:,i], eigens[k+1:,j] = eigens[k+1:,j], eigens[k+1:,i].copy()
                             break
 
