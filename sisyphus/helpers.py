@@ -5,9 +5,12 @@
 """
 
 import numpy as np
+import pickle
 import functools
 
 
+# Define alias for factorial function
+fac = np.math.factorial
 
 def mdot(A: np.ndarray, B: np.ndarray) -> np.ndarray:
     """
@@ -162,7 +165,7 @@ def t_sum_6j(j1, j2, j3, J1, J2, J3):
         j3 + j1 + J3 + J1
     ]).min()
 
-    for t in range(tmin, tmax + 1):
+    for t in range(int(tmin), int(tmax) + 1):
 
         # Construct arguments of factorials to be tested
         factorial_arguments = [
