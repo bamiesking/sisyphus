@@ -189,11 +189,15 @@ def t_sum_6j(j1, j2, j3, J1, J2, J3):
     return total
 
 
-def determine_symmetries(j1, j2, j, m1, m2, m, symbol):
+def determine_symmetries(symbol, *args):
     """
         Determines symmetries of Wigner symbols
     """
     if symbol == '3j':
+
+        # Unpack arguments
+        j1, j2, j, m1, m2, m = args
+
         equal = [
             format_label(j2, j, j1, m2, m, m1),
             format_label(j, j1, j2, m, m1, m1)
@@ -209,8 +213,8 @@ def determine_symmetries(j1, j2, j, m1, m2, m, symbol):
         return {1: equal, (-1)**(j1+j2+j): prefactor}
     elif symbol == '6j':
 
-        # Redefine symbols for clarity
-        j3, J1, J2, J3 = j, m1, m2, m
+        # Unpack arguments
+        j1, j2, j3, J1, J2, J3 = args
 
         equal = [
             format_label(j2, j1, j3, J2, J1, J3),
@@ -223,13 +227,9 @@ def determine_symmetries(j1, j2, j, m1, m2, m, symbol):
         return {1: equal}
 
 
-def format_label(j1, j2, j, m1, m2, m):
-    return str(j1) + \
-           str(j2) + \
-           str(j) + \
-           str(m1) + \
-           str(m2) + \
-           str(m)
+
+def format_label(*args):
+    return ''.join(str(x) for x in args)
 
 
 def precalc(symbol):
@@ -248,7 +248,7 @@ def precalc(symbol):
                 return symbols[symbol][label]
             
             value = func(*args, **kwargs)
-            symmetries = determine_symmetries(*args, symbol)
+            symmetries = determine_symmetries(symbol, *args)
             symbols[symbol][label] = value
             for prefactor in symmetries.keys():
                 for sym_label in symmetries[prefactor]:
@@ -275,6 +275,10 @@ def Wigner3j(j1, j2, j, m1, m2, m):
 
         According to https://mathworld.wolfram.com/Wigner3j-Symbol.html
     """
+    if not triangular_inequalities((j1, j2, j)):
+        return 0
+    elif not isinstance(j1 + j2 + j , int):
+        return 0
     return (-1)**(j1 - j2 - m) * \
            np.sqrt(
                 triangle_coefficient(j1, j2, j) * \
