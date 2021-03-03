@@ -96,6 +96,7 @@ class Atom():
             l (int): The orbital angular momentum quantum number of the atom.
             position (np.ndarray, optional): The position of the atom in 3D space.
             B_field (Field, optional): The applied magnetic field.
+            E_field (Field, optional): The applied electric field.
             energy_offset: (float, optional): An amount by which to offset the eigenenergies of the atom.
             energy_scaling: (float, optional): An amount by which to scale the eigenenergies of the atom.
 
@@ -132,8 +133,13 @@ class Atom():
         # Store energy adjustments
         self.energy_offset = energy_offset
         self.energy_scaling = energy_scaling
+
         # Set quantum numbers
         self.n = n
+
+        if not 0 <= l <= n-1:
+            raise ValueError('l must be between 0 and n-1 ({})'.format(self.n-1))
+
         self.l = l
         self.s = 0.5
         self.i = 0.5
@@ -163,7 +169,7 @@ class Atom():
 
         prev = 0
         for label, i in zip(nist_data.keys(), range(len(nist_data.keys()))):
-            if label[0:1] == '{}{}'.format(self.n, get_orbital_symbol([self.l]).lower()):
+            if label[0:2] == '{}{}'.format(self.n, get_orbital_symbol([self.l]).lower()):
                 j = float(label[2:])
                 dim = int(2*j+1)*int(2*self.i+1)
                 current = prev + dim

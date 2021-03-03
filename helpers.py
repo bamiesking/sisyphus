@@ -309,7 +309,7 @@ def Wigner6j(j1, j2, j3, J1, J2, J3):
         return 0
 
     # Ensure triads sum to an integer
-    if not all([isinstance(sum([i for i in triad]) % 1, int) for triad in triads]):
+    if not all([sum([i for i in triad]) % 1 == 0 for triad in triads]):
         return 0
 
     return t_sum_6j(j1, j2, j3, J1, J2, J3) * \
