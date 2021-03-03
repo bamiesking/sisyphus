@@ -96,6 +96,8 @@ class Atom():
             l (int): The orbital angular momentum quantum number of the atom.
             position (np.ndarray, optional): The position of the atom in 3D space.
             B_field (Field, optional): The applied magnetic field.
+            energy_offset: (float, optional): An amount by which to offset the eigenenergies of the atom.
+            energy_scaling: (float, optional): An amount by which to scale the eigenenergies of the atom.
 
         Attributes:
             n: The principal quantum number.
@@ -115,10 +117,10 @@ class Atom():
 
     """
 
-    def __init__(self, n, l=0, position=np.array([0, 0, 0]), B_field=Field(np.array([lambda x: 0, lambda y : 0, lambda z : 0])), E_field=Field(np.array([lambda x: 0, lambda y : 0, lambda z : 0]))):
+    def __init__(self, n, l=0, position=np.array([0, 0, 0]), B_field=Field(np.array([lambda x: 0, lambda y : 0, lambda z : 0])), E_field=Field(np.array([lambda x: 0, lambda y : 0, lambda z : 0])), energy_offset=0, energy_scaling=1):
 
         # Threshold proximity for two lines to be swapped
-        self.epsilon = 1e-27/A_hfs[1]
+        self.epsilon = 1e-27/energy_scaling
 
         # Store position
         self.position = position
@@ -127,6 +129,9 @@ class Atom():
         self.B_field = B_field
         self.E_field = E_field
 
+        # Store energy adjustments
+        self.energy_offset = energy_offset
+        self.energy_scaling = energy_scaling
         # Set quantum numbers
         self.n = n
         self.l = l
@@ -201,7 +206,11 @@ class Atom():
         if position is not None:
             self._position = position
         
-        return np.linalg.eigh(self.Hamiltonian)
+        raw = np.linalg.eigh(self.Hamiltonian)
+
+        # Rescale and offset energies
+        adjusted = ([(r+energy_offset)*energy_scaling for r in raw[0]], raw[1])
+        return adjusted
 
     def plotZeemanEnergyShift(self, n):
         """
@@ -222,7 +231,7 @@ class Atom():
         # Generate energies
         for i,j in zip(n, range(n.size)):
             self.position = np.array([i, i, i])
-            eigens[j] = self.eigen()[0]/A_hfs[1]
+            eigens[j] = self.eigen()[0]
 
         # Reset position
         self.position = position_init
