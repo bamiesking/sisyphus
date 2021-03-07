@@ -37,7 +37,7 @@ def mdot(A: np.ndarray, B: np.ndarray) -> np.ndarray:
         M = M + np.dot(a,b)
     return M
 
-def get_orbital_symbol(l: int) -> str:
+def convert_orbital_number_to_letter(l: int) -> str:
     """
         Returns the letter corresponding to a particular value of orbital angular momentum 
         quantum number l for l <= 20.
@@ -52,7 +52,7 @@ def get_orbital_symbol(l: int) -> str:
             ValueError: If l > 20
     """
 
-    if max(l) > 20:
+    if l > 20:
         raise ValueError('l cannot be greater than 20')
 
     symbol = { 0: 'S', 
@@ -76,7 +76,47 @@ def get_orbital_symbol(l: int) -> str:
                18: 'X',
                19: 'Y',
                20: 'Z'
-             }[max(l)]
+             }[l]
+    return symbol
+
+
+def convert_orbital_letter_to_number(l: str) -> int:
+    """
+        Returns the letter corresponding to a particular value of orbital angular momentum 
+        quantum number l for l <= 20.
+
+        Args:
+            l: The orbital angular momentum quantum number.
+
+        Returns:
+            The corresponding spectroscopic notation symbol for the oribital angular momentum quantum number.
+
+        Raises:
+            ValueError: If l > 20
+    """
+
+    symbol = { 'S': 0, 
+               'P': 1, 
+               'D': 2,
+               'F': 3,
+               'G': 4,
+               'H': 5,
+               'I': 6,
+               'K': 7,
+               'L': 8,
+               'M': 9,
+               'N': 10,
+               'O': 11,
+               'Q': 12,
+               'R': 13,
+               'T': 14,
+               'U': 15,
+               'V': 16,
+               'W': 17,
+               'X': 18,
+               'Y': 19,
+               'Z': 20
+             }[l.upper()]
     return symbol
 
 def convert_decimal_to_latex_fraction(d):
