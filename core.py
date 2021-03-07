@@ -121,7 +121,7 @@ class Atom():
     def __init__(self, n, l=0, position=np.array([0, 0, 0]), B_field=Field(np.array([lambda x: 0, lambda y : 0, lambda z : 0])), E_field=Field(np.array([lambda x: 0, lambda y : 0, lambda z : 0])), energy_offset=0, energy_scaling=1):
 
         # Threshold proximity for two lines to be swapped
-        self.epsilon = 1e-27/energy_scaling
+        self.epsilon = 1e-28*energy_scaling
 
         # Store position
         self.position = position
@@ -159,13 +159,13 @@ class Atom():
             np.ndarray: The Hamiltonian of the atom at the current position and field.
         """
 
-        self._Hamiltonian = self.H0 + A_hfs[self.n]*mdot(self.J, self.I) + self.magneticDipoleInteraction + self.electricDipoleInteraction
+        self._Hamiltonian = A_hfs[self.n]*mdot(self.J, self.I) + self.magneticDipoleInteraction + self.electricDipoleInteraction
         return self._Hamiltonian
     
 
     @property
     def H0(self):
-        self._H0 = np.full((self.dim, self.dim), 0+0j)
+        self._H0 = np.full((self.dim, self.dim), 0+0j, dtype=np.longdouble)
 
         prev = 0
         for label, i in zip(nist_data.keys(), range(len(nist_data.keys()))):
@@ -202,7 +202,7 @@ class Atom():
         self._position = position
 
 
-    def eigen(self, position=None):
+    def eigen(self, position=None, coarse=True):
         """
             Returns the eigenenergies and eigenstates of the atom in its current configuration.
 
@@ -213,10 +213,40 @@ class Atom():
             self._position = position
         
         raw = np.linalg.eigh(self.Hamiltonian)
+        if coarse:
+            raw = [raw[0] + np.diag(self.H0), raw[1]]
 
         # Rescale and offset energies
         adjusted = ([(r+energy_offset)*energy_scaling for r in raw[0]], raw[1])
         return adjusted
+
+    def eigen_range(self, x):
+        # Store initial position
+        position_init = self.position
+
+        # Set up array to store energies
+        eigens = np.zeros((x.size, self.dim), dtype=np.longdouble)
+
+        # Generate energies
+        for i,j in zip(x, range(x.size)):
+            self.position = np.array([i, i, i])
+            eigens[j] = self.eigen(coarse=False)[0]
+
+        # Reset position
+        self.position = position_init
+
+        # Fix eigenvalue ordering
+        for i in range(self.dim):
+            for j in range(i+1, self.dim):
+                for k in range(len(x)):
+                    if np.abs(eigens[k, i] - eigens[k, j]) < self.epsilon:
+                        eigens[k+1:,i], eigens[k+1:,j] = eigens[k+1:,j], eigens[k+1:,i].copy()
+                        break
+        order = np.argsort(eigens[int(len(x)/20),:])[::-1]
+
+        eigens += np.diag(self.H0)
+
+        return eigens[:, order]
 
     def plotZeemanEnergyShift(self, n):
         """
@@ -227,29 +257,9 @@ class Atom():
                 ax (matplotlib.pyplot.Axis): The axis object on which to plot the lines
         """
 
-        # Store initial position
-        position_init = self.position
-
-
-        # Set up array to store energies
-        eigens = np.zeros((n.size, self.dim))
-
-        # Generate energies
-        for i,j in zip(n, range(n.size)):
-            self.position = np.array([i, i, i])
-            eigens[j] = self.eigen()[0]
-
-        # Reset position
-        self.position = position_init
-
-
-        # Fix eigenvalue ordering
-        for i in range(self.dim):
-            for j in range(i+1, self.dim):
-                for k in range(len(n)):
-                    if np.abs(eigens[k, i] - eigens[k, j]) < self.epsilon:
-                            eigens[k+1:,i], eigens[k+1:,j] = eigens[k+1:,j], eigens[k+1:,i].copy()
-                            break
+        eigens = self.eigen_range(n)
+        for i in range(4):
+            print(eigens[:,i].max())
 
         lines = []
         for i in range(self.dim):
