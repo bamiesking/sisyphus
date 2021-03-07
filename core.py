@@ -18,8 +18,9 @@ import types
 
 def construct_operator(j: int) -> np.ndarray:
     r"""
-        Constructs matrix representation of an arbitrary angular momentum operator J given a j value, using properties of angular 
-        momentum ladder operators:
+        Constructs matrix representation of an arbitrary angular momentum
+        operator J given a j value, using properties of angular momentum
+        ladder operators:
 
         :math:`\hat{j}_+ |j,m\rangle = \sqrt{j(j+1) - m(m+1)} |j,m+1\rangle`
         :math:`\hat{j}_- = \hat{j}_+^\dagger`
@@ -32,7 +33,7 @@ def construct_operator(j: int) -> np.ndarray:
 
         where :math:`\vec{i},\vec{j},\vec{k}` are unit vectors in the :math:`x,y,z` directions respectively.
 
-        Args: 
+        Args:
             j: The value of the quantum number of the angular momentum operator J to be constructed.
 
         Returns:
@@ -41,13 +42,13 @@ def construct_operator(j: int) -> np.ndarray:
     """
 
     # Enumerate m_j values (z projection quantum number)
-    m = [i for i in np.arange(-j,j+1)]
+    m = [i for i in np.arange(-j, j+1)]
 
     # Construct j_+ operator element-wise
     j_plus = np.zeros((len(m), len(m)))
-    for ix,iy in np.ndindex(j_plus.shape):
+    for ix, iy in np.ndindex(j_plus.shape):
         if m[ix] == m[iy]-1:
-            j_plus[ix,iy] = np.sqrt(j*(j+1) - m[ix]*(m[ix]+1))
+            j_plus[ix, iy] = np.sqrt(j*(j+1) - m[ix]*(m[ix]+1))
 
     # Construct j_- operator
     j_minus = j_plus.T
@@ -55,9 +56,10 @@ def construct_operator(j: int) -> np.ndarray:
     # Construct j_x, j_y, j_z operators
     j_x = 0.5*(j_plus + j_minus)
     j_y = -0.5j*(j_plus - j_minus)
-    j_z = 0.5*(np.dot(j_plus,j_minus) - np.dot(j_minus,j_plus))
+    j_z = 0.5*(np.dot(j_plus, j_minus) - np.dot(j_minus, j_plus))
 
     return np.array([j_x, j_y, j_z])
+
 
 class Field():
     """
@@ -81,7 +83,7 @@ class Field():
             Returns:
                 A numpy array representing vector field strength.
         """
-        return np.array([self.profile[i](r[i]) for i in range(0,3)])
+        return np.array([self.profile[i](r[i]) for i in range(0, 3)])
 
 
 class Atom():
@@ -130,7 +132,7 @@ class Atom():
         self.B_field = B_field
         self.E_field = E_field
 
-        # Store energy adjustments
+        # Store energy adjustments
         self.energy_offset = energy_offset
         self.energy_scaling = energy_scaling
 
@@ -161,23 +163,22 @@ class Atom():
 
         self._Hamiltonian = A_hfs[self.n]*mdot(self.J, self.I) + self.magneticDipoleInteraction + self.electricDipoleInteraction
         return self._Hamiltonian
-    
 
     @property
     def H0(self):
         self._H0 = np.full((self.dim, self.dim), 0+0j, dtype=np.longdouble)
 
         prev = 0
-        for label, i in zip(nist_data.keys(), range(len(nist_data.keys()))):
-            if label[0:2] == '{}{}'.format(self.n, get_orbital_symbol([self.l]).lower()):
+        for label, i in zip(nist_energy_levels.keys(), range(len(nist_energy_levels.keys()))):
+            if label[0:2] == '{}{}'.format(self.n, convert_orbital_number_to_letter(self.l)):
                 j = float(label[2:])
                 dim = int(2*j+1)*int(2*self.i+1)
                 current = prev + dim
-                value = -1*nist_data[label]*(h*c*1e2)
+                value = -1*nist_energy_levels[label]*(h*c*1e2)
                 self._H0[prev:current, prev:current] = value*np.identity(dim)
                 prev = current
         return self._H0
-    
+
 
     @property
     def magneticDipoleInteraction(self):
@@ -196,7 +197,7 @@ class Atom():
             np.ndarray: The current position of the atom.
         """
         return self._position
-    
+
     @position.setter
     def position(self, position):
         self._position = position
@@ -211,13 +212,13 @@ class Atom():
         """
         if position is not None:
             self._position = position
-        
+
         raw = np.linalg.eigh(self.Hamiltonian)
         if coarse:
             raw = [raw[0] + np.diag(self.H0), raw[1]]
 
         # Rescale and offset energies
-        adjusted = ([(r+energy_offset)*energy_scaling for r in raw[0]], raw[1])
+        adjusted = ([(r+self.energy_offset)*self.energy_scaling for r in raw[0]], raw[1])
         return adjusted
 
     def eigen_range(self, x):
@@ -300,5 +301,3 @@ class Atom():
 
         states = np.absolute(states)
         return states
-
-
