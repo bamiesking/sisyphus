@@ -364,18 +364,17 @@ def Wigner6j(j1, j2, j3, J1, J2, J3):
 
 
 # Dunning & Hulet, Ch. 9
-def BranchingRatio(l1, s1, j1, i1, f1, m1, l2, s2, j2, i2, f2, m2, q):
+def BranchingRatio(l1, s1, j1, i1, f1, m1, l2, s2, j2, i2, f2, m2, k, q):
     factors = [
         2*f1+1,
         2*f2+1,
         2*j1+1,
         2*j2+1,
         2*l1+1,
-        Wigner6j(l2, j2, s1, j1, l1, 1)**2,
-        Wigner6j(j2, f2, i1, f1, j1, 1)**2,
-        Wigner3j(f2, f1, 1, m2, -1*m1, q)**2
+        Wigner6j(l2, j2, s1, j1, l1, k)**2,
+        Wigner6j(j2, f2, i1, f1, j1, k)**2,
+        Wigner3j(f2, f1, k, m2, -1*m1, q)**2
     ]
-    print(factors)
     value = 1
     for factor in factors:
         value *= factor
