@@ -9,8 +9,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from scipy.constants import physical_constants, hbar, c, alpha, h
-from .constants import A_hfs, nist_data
 from .helpers import mdot, get_orbital_symbol, convert_decimal_to_latex_fraction
+from .constants import A_hfs, nist_energy_levels
 import time
 import warnings
 import types
