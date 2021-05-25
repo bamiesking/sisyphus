@@ -289,6 +289,21 @@ def format_label(*args):
     return ''.join(str(x) for x in args)
 
 
+def get_state_energy(n, l, j):
+    label = format_label(n, convert_orbital_number_to_letter(l), j)
+    if label in nist_energy_levels.keys():
+        return nist_energy_levels[label]
+    else:
+        # Use Rydberg formula
+        return (physical_constants['Rydberg constant times hc in J'][0] *
+                (1-1/n**2)/(h*c*1e2))
+
+
+def transition_wavelength(n1, l1, j1, n2, l2, j2):
+    energy1 = get_state_energy(n1, l1, j1)
+    energy2 = get_state_energy(n2, l2, j2)
+    return np.abs(1e-2/(energy2-energy1))
+
 def precalc(symbol):
     def precalc_decorator(func):
         @functools.wraps(func)
