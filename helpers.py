@@ -343,9 +343,11 @@ def Wigner3j(j1, j2, j, m1, m2, m):
     """
     if not triangular_inequalities((j1, j2, j)):
         return 0
-    elif not isinstance(j1 + j2 + j , int):
+    elif not (j1+j2+j) % 1 == 0:
         return 0
-    return (-1)**(j1 - j2 - m) * \
+    elif not m1 + m2 == -1*m:
+        return 0
+    return (-1)**(j1 - j2 + m) * \
            np.sqrt(
                 triangle_coefficient(j1, j2, j) * \
                 fac(j1 + m1) *
