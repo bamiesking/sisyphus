@@ -1,20 +1,10 @@
 """
     Provides a number of methods to support classes defined in .methods.
-
-    Functions defined here are not crucial to the physics the package is trying to simulate
 """
 
+
 import numpy as np
-import pickle
-import functools
-from sympy import Symbol, symbols, diff, exp, integrate, oo
-from sympy.physics.hydrogen import R_nl
-from scipy.constants import physical_constants, pi, hbar, c, h, e
-from .constants import nist_decay_rates, nist_energy_levels
 
-
-# Define alias for factorial function
-fac = np.math.factorial
 
 def mdot(A: np.ndarray, B: np.ndarray) -> np.ndarray:
     """
@@ -43,7 +33,7 @@ def mdot(A: np.ndarray, B: np.ndarray) -> np.ndarray:
 
 def convert_orbital_number_to_letter(l: int) -> str:
     """
-        Returns the letter corresponding to a particular value of orbital angular momentum 
+        Returns the letter corresponding to a particular value of orbital angular momentum
         quantum number l for l <= 20.
 
         Args:
@@ -59,8 +49,8 @@ def convert_orbital_number_to_letter(l: int) -> str:
     if l > 20:
         raise ValueError('l cannot be greater than 20')
 
-    symbol = { 0: 'S', 
-               1: 'P', 
+    symbol = { 0: 'S',
+               1: 'P',
                2: 'D',
                3: 'F',
                4: 'G',
@@ -86,7 +76,7 @@ def convert_orbital_number_to_letter(l: int) -> str:
 
 def convert_orbital_letter_to_number(l: str) -> int:
     """
-        Returns the letter corresponding to a particular value of orbital angular momentum 
+        Returns the letter corresponding to a particular value of orbital angular momentum
         quantum number l for l <= 20.
 
         Args:
@@ -99,8 +89,8 @@ def convert_orbital_letter_to_number(l: str) -> int:
             ValueError: If l > 20
     """
 
-    symbol = { 'S': 0, 
-               'P': 1, 
+    symbol = { 'S': 0,
+               'P': 1,
                'D': 2,
                'F': 3,
                'G': 4,
@@ -123,6 +113,7 @@ def convert_orbital_letter_to_number(l: str) -> int:
              }[l.upper()]
     return symbol
 
+
 def convert_decimal_to_latex_fraction(d):
     sign = ''
     if d < 0:
@@ -130,341 +121,5 @@ def convert_decimal_to_latex_fraction(d):
     return r'{{{sign}}}\frac{{{e}}}{{2}}'.format(sign=sign, e=int(2*d))
 
 
-def triangle_coefficient(a, b, c):
-    r"""
-        Calculates the triangle coefficient:
-
-            :math:`\Delta (a, b, c)`
-
-        According to https://mathworld.wolfram.com/TriangleCoefficient.html
-    """
-
-    # Calculate numerator factors:
-    num1 = np.math.factorial(a + b - c)
-    num2 = np.math.factorial(b + c - a)
-    num3 = np.math.factorial(c + a - b)
-    num = num1*num2*num3
-
-    # Calculate denominator
-    denom = np.math.factorial(a + b + c + 1)
-
-    return num/denom
-
-def t_sum_3j(j1, j2, j, m1, m2, m):
-    # Initialise variables
-    total, t, counter = 0, 0, 0
-
-    tmin = np.array([
-        j2 - j - m1,
-        j1 + m2 - j,
-        0
-    ]).max()
-
-    tmax = np.array([
-        j1 + j2 - j,
-        j1 - m1,
-        j2 + m2
-    ]).min()
-
-    for t in range(tmin, tmax + 1):
-
-        # Construct arguments of factorials to be tested
-        factorial_arguments = [
-            t,
-            j - j2 + t + m1,
-            j - j1 + t - m2,
-            j1 + j2 - j - t,
-            j1 - t - m1,
-            j2 - t + m2
-        ]
-
-        term = (-1)**t
-
-        # Test whether all factorial arguments are valid 
-        if all([i >= 0 for i in factorial_arguments]):
-            # Calculate factorials for all terms
-            for i in factorial_arguments:
-                term *= np.math.factorial(i)
-
-            # Add inverse of product of factorials to the total. Note (-1)**t is equivalent to (-1)**(-t).
-            total += 1/term
-        t += 1
-    return total
-
-
-def t_sum_6j(j1, j2, j3, J1, J2, J3):
-    # Initialise variables
-    total, t, counter = 0, 0, 0
-
-    tmin = np.array([
-        j1 + j2 + j3,
-        j1 + J2 + J3,
-        J1 + j2 + J3,
-        J1 + J2 + J3
-    ]).max()
-
-    tmax = np.array([
-        j1 + j2 + J1 + J2,
-        j2 + j3 + J2 + J3,
-        j3 + j1 + J3 + J1
-    ]).min()
-
-    for t in range(int(tmin), int(tmax) + 1):
-
-        # Construct arguments of factorials to be tested
-        factorial_arguments = [
-            t - j1 - j2 - j3,
-            t - j1 - J2 - J3,
-            t - J1 - j2 - J3,
-            t - J1 - J2 - j3,
-            j1 + j2 + J1 + J2 - t,
-            j2 + j3 + J2 + J3 - t,
-            j3 + j1 + J3 + J1 - t
-        ]
-
-        term = (-1)**t
-
-        # Test whether all factorial arguments are valid 
-        if all([i >= 0 for i in factorial_arguments]):
-            # Calculate factorials for all terms
-            for i in factorial_arguments:
-                term *= np.math.factorial(i)
-
-            # Add inverse of product of factorials to the total. Note (-1)**t is equivalent to (-1)**(-t).
-            total += np.math.factorial(t+1)/term
-        t += 1
-    return total
-
-
-def determine_symmetries(symbol, *args):
-    """
-        Determines symmetries of Wigner symbols
-    """
-    if symbol == '3j':
-
-        # Unpack arguments
-        j1, j2, j, m1, m2, m = args
-
-        equal = [
-            format_label(j2, j, j1, m2, m, m1),
-            format_label(j, j1, j2, m, m1, m1)
-        ]
-
-        prefactor = [
-            format_label(j2, j1, j, m2, m1, m),
-            format_label(j1, j, j2, m1, m, m2),
-            format_label(j, j2, j1, m, m2, m1),
-            format_label(j1, j2, j, -1*m1, -1*m2, -1*m)
-        ]
-
-        return {1: equal, (-1)**(j1+j2+j): prefactor}
-    elif symbol == '6j':
-
-        # Unpack arguments
-        j1, j2, j3, J1, J2, J3 = args
-
-        equal = [
-            format_label(j2, j1, j3, J2, J1, J3),
-            format_label(j3, j1, j2, J3, J1, J2),
-            format_label(J1, J2, j3, j1, j2, J3),
-            format_label(J1, j2, J3, j1, J2, j3),
-            format_label(j1, J2, J3, J1, j2, j3)
-        ]
-
-        return {1: equal}
-    elif symbol == 'intR':
-
-        # Unpack arguments
-        n1, l1, n2, l2 = args
-
-        equal = [
-            format_label(n2, l2, n1, l1)
-        ]
-        return {1: equal}
-    else:
-        return {}
-
-
 def format_label(*args):
     return ''.join(str(x) for x in args)
-
-
-def get_state_energy(n, l, j):
-    label = format_label(n, convert_orbital_number_to_letter(l), j)
-    if label in nist_energy_levels.keys():
-        return nist_energy_levels[label]
-    else:
-        # Use Rydberg formula
-        return (physical_constants['Rydberg constant times hc in J'][0] *
-                (1-1/n**2)/(h*c*1e2))
-
-
-def transition_wavelength(n1, l1, j1, n2, l2, j2):
-    energy1 = get_state_energy(n1, l1, j1)
-    energy2 = get_state_energy(n2, l2, j2)
-    return np.abs(1e-2/(energy2-energy1))
-
-def precalc(symbol):
-    def precalc_decorator(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            symbols = {'3j': {},
-                       '6j': {},
-                       '<d>': {},
-                       'alpha_E1': {},
-                       'intR': {},
-                       'npbr': {}}
-            keys = symbols.keys()
-            try:
-                with open('symbol_storage.pickle', 'rb') as f:
-                    symbols = pickle.load(f)
-                    new_keys = set(keys) - set(symbols.keys())
-                    for key in keys:
-                        symbols[key] = {}
-            except:
-                pass
-
-            label = format_label(*args)
-            if label in symbols[symbol]:
-                return symbols[symbol][label]
-            
-            value = func(*args, **kwargs)
-            symmetries = determine_symmetries(symbol, *args)
-            symbols[symbol][label] = value
-            for prefactor in symmetries.keys():
-                for sym_label in symmetries[prefactor]:
-                    symbols[symbol][sym_label] = prefactor*value
-            with open('symbol_storage.pickle', 'wb+') as f:
-                pickle.dump(symbols, f)
-
-            return value 
-        return wrapper
-    return precalc_decorator
-
-
-def triangular_inequalities(tup):
-    x, y, z = tup
-    return np.abs(x - y) <= z <= x + y
-
-
-@precalc('3j')
-def Wigner3j(j1, j2, j, m1, m2, m):
-    r"""
-        Calculates the Wigner-3j symbol using the Racah formula:
-
-            :math:`\begin{pmatrix} j_1 & j_2 & j \\ m_1 & m_2 & m \end{pmatrix}`
-
-        According to https://mathworld.wolfram.com/Wigner3j-Symbol.html
-    """
-    if not triangular_inequalities((j1, j2, j)):
-        return 0
-    elif not (j1+j2+j) % 1 == 0:
-        return 0
-    elif not m1 + m2 == -1*m:
-        return 0
-    return (-1)**(j1 - j2 + m) * \
-           np.sqrt(
-                triangle_coefficient(j1, j2, j) * \
-                fac(j1 + m1) *
-                fac(j1 - m1) *
-                fac(j2 + m2) *
-                fac(j2 - m2) *
-                fac(j + m) *
-                fac(j - m)
-           ) * \
-           t_sum_3j(j1, j2, j, m1, m2, m)
-
-
-@precalc('6j')
-def Wigner6j(j1, j2, j3, J1, J2, J3):
-    triads = [
-        (j1, j2, j3),
-        (j1, J2, J3),
-        (J1, j2, J3),
-        (J1, J2, j3)
-    ]
-
-    # Ensure triads obey triangular inequalities
-    if not all([triangular_inequalities(triad) for triad in triads]):
-        return 0
-
-    # Ensure triads sum to an integer
-    if not all([sum([i for i in triad]) % 1 == 0 for triad in triads]):
-        return 0
-
-    return t_sum_6j(j1, j2, j3, J1, J2, J3) * \
-           np.sqrt(
-                triangle_coefficient(j1, j2, j3) *
-                triangle_coefficient(j1, J2, J3) *
-                triangle_coefficient(J1, j2, J3) *
-                triangle_coefficient(J1, J2, j3)
-           )
-
-
-
-
-@precalc('intR')
-def radialIntegral(n1, l1, n2, l2):
-    r = Symbol('r')
-    integrand = R_nl(n2, l2, r)*R_nl(n1, l1, r)*r**3
-    return integrate(integrand, (r, 0, oo))
-# Dunning & Hulet, Ch. 9
-def BranchingRatio(l1, s1, j1, i1, f1, m1, l2, s2, j2, i2, f2, m2, k, q):
-    factors = [
-        2*f1+1,
-        2*f2+1,
-        2*j1+1,
-        2*j2+1,
-        2*l1+1,
-        Wigner6j(l2, j2, s1, j1, l1, k)**2,
-        Wigner6j(j2, f2, i1, f1, j1, k)**2,
-        Wigner3j(f2, f1, k, m2, -1*m1, q)**2
-    ]
-    value = 1
-    for factor in factors:
-        value *= factor
-    return value
-
-
-@precalc('<d>')
-def ElectricDipoleTransitionMatrixElement(n1, l1, s1, j1, i1, f1, m1, n2, l2, s2, j2, i2, f2, m2, q):
-    ratio = BranchingRatio(l1, s1, j1, i1, f1, m1, l2, s2, j2, i2, f2, m2, 1, q)
-    d2 = radialIntegral(n1, l1, n2, l2)
-    return e*d2*np.sqrt(ratio)
-
-
-@precalc('alpha_E1')
-def ElectricDipolePolarizability(polarization, applied_frequency, n1, l1, s1, j1, i1, f1, m1, n_max=5):
-    terms = []
-    s2, i2 = 0.5, 0.5
-    for n2 in range(1, n_max+1):
-        if n2 != n1:
-            for l2 in range(n2):
-                for j2 in np.arange(np.abs(l2-s2), l2+s2+1, 1):
-                    freq = (2*pi*c)/transition_wavelength(n1, l1, j1, n2, l2, j2)
-                    for f2 in np.arange(np.abs(j2-i2), j2+i2+1, 1, dtype=int):
-                        for m2 in np.arange(-1*f2, f2, 1, dtype=int):
-                            for polarization in [-1, 0, 1]:
-                                terms.append((freq*(ElectricDipoleTransitionMatrixElement(n1, l1, s1, j1, i1, f1, m1, n2, l2, s2, j2, i2, f2, m2, polarization)))/(freq**2 - applied_frequency**2))
-    val = 2*np.abs(np.array(terms)).sum()/hbar
-    return val
-
-@precalc('npbr')
-def NPhotonBranchingRatio(l1, s1, j1, i1, f1, m1, l2, s2, j2, i2, f2, m2, n_max=10):
-    terms = []
-    # s3, i3 = 0.5, 0.5
-    for n3 in range(1, n_max+1):
-        for l3 in range(n3):
-            for s3 in [-0.5, 0.5]:
-                for j3 in np.arange(np.abs(l3-s3), l3+s3+1, 1):
-                    for i3 in [-0.5, 0.5]:
-                        for f3 in np.arange(np.abs(j3-i3), j3+i3+1, 1, dtype=int):
-                            for m3 in np.arange(-1*f3, f3+1, 1, dtype=int):
-                                for polarization1 in [-1., 0., 1.]:
-                                    for polarization2 in [-1., 0., 1.]:
-                                        terms.append(BranchingRatio(l1, s1, j1, i1, f1, m1, l3, s3, j3, i3, f3, m3, 1, polarization1) *
-                                                     BranchingRatio(l3, s3, j3, i3, f3, m3, l2, s2, j2, i2, f2, m2, 1, polarization2))
-    val = np.abs(np.array(terms)).sum()
-    return val
-
-
